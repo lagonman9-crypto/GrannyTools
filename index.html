@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GrannyTools — Speedrun Menu</title>
+<meta name="description" content="GrannyTools: a free speedrun, practice and mod menu for the PC version of Granny. Download the DLL and set it up with BepInEx in a few minutes.">
+<meta name="theme-color" content="#0b0707">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cellipse cx='32' cy='32' rx='28' ry='16' fill='%23e8dccb'/%3E%3Ccircle cx='32' cy='32' r='11' fill='%23a10d12'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%23000'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Creepster&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0707;
+    --bg2: #120b0a;
+    --panel: #171010;
+    --panel2: #1e1413;
+    --line: rgba(255, 230, 210, 0.08);
+    --text: #eadfd2;
+    --dim: #a8968a;
+    --blood: #b3121a;
+    --blood2: #e0262f;
+    --ember: #ff8a3d;
+    --bone: #e8dccb;
+    --ok: #6fd18a;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 Inter, system-ui, -apple-system, Segoe UI, sans-serif;
+    overflow-x: hidden;
+  }
+  a { color: var(--ember); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, .mono { font-family: "JetBrains Mono", Consolas, monospace; font-size: 0.92em; }
+  code { background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 6px; color: var(--bone); word-break: break-all; }
+
+  /* ---------- atmosphere: planks, vignette, candle light, embers */
+  .bg {
+    position: fixed; inset: 0; z-index: -2; pointer-events: none;
+    background:
+      radial-gradient(900px 600px at 12% -5%, rgba(255, 120, 40, 0.13), transparent 60%),
+      radial-gradient(800px 500px at 100% 0%, rgba(179, 18, 26, 0.16), transparent 60%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0 2px, transparent 2px 64px),
+      repeating-linear-gradient(90deg, rgba(0,0,0,0.25) 0 1px, transparent 1px 220px),
+      linear-gradient(180deg, #140c0b, var(--bg) 40%, #070404);
+  }
+  .bg::after {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.75) 100%);
+  }
+  .candle { position: fixed; top: -180px; left: -160px; width: 700px; height: 600px; z-index: -1; pointer-events: none;
+    background: radial-gradient(closest-side, rgba(255,140,60,0.16), transparent); animation: flicker 3.2s infinite; }
+  @keyframes flicker { 0%,100% { opacity: .85 } 20% { opacity: 1 } 35% { opacity: .7 } 60% { opacity: .95 } 75% { opacity: .78 } }
+  #embers { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+
+  .wrap { width: min(1120px, 100% - 32px); margin: 0 auto; }
+
+  /* ---------- nav */
+  nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(10px); background: rgba(11,7,7,0.72); border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; gap: 18px; height: 62px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text); letter-spacing: .3px; }
+  .brand:hover { text-decoration: none; }
+  .navlinks { margin-left: auto; display: flex; gap: 22px; }
+  .navlinks a { color: var(--dim); font-weight: 500; font-size: 15px; }
+  .navlinks a:hover { color: var(--text); text-decoration: none; }
+  @media (max-width: 720px) { .navlinks { display: none; } }
+
+  /* the eye: an original mark that watches your cursor */
+  .eye { position: relative; width: 38px; height: 22px; border-radius: 50%; background: var(--bone);
+    box-shadow: 0 0 0 2px #2a0405, 0 0 18px rgba(200,20,20,0.45); overflow: hidden; flex: none; animation: blink 5.5s infinite; }
+  .eye .iris { position: absolute; width: 13px; height: 13px; border-radius: 50%; left: 12.5px; top: 4.5px;
+    background: radial-gradient(circle at 50% 50%, #000 0 30%, #8f0a10 32% 100%); transition: transform .08s linear; }
+  .eye.big { width: 120px; height: 66px; box-shadow: 0 0 0 4px #2a0405, 0 0 60px rgba(200,20,20,0.55); }
+  .eye.big .iris { width: 42px; height: 42px; left: 39px; top: 12px; }
+  @keyframes blink { 0%, 95%, 100% { transform: scaleY(1) } 97% { transform: scaleY(0.08) } }
+
+  /* ---------- hero */
+  header.hero { padding: 84px 0 56px; }
+  .hero .wrap { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 40px; align-items: center; }
+  @media (max-width: 880px) { .hero .wrap { grid-template-columns: 1fr; } .hero-art { order: -1; } }
+  .kicker { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px; border: 1px solid rgba(224,38,47,0.35);
+    background: rgba(179,18,26,0.12); color: #ffb3b3; font-size: 13px; font-weight: 600; letter-spacing: .4px; }
+  .kicker .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--blood2); box-shadow: 0 0 10px var(--blood2); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 50% { opacity: .35 } }
+  h1 { font-family: Creepster, Inter, sans-serif; font-weight: 400; font-size: clamp(48px, 8vw, 92px); line-height: .95; margin: 18px 0 10px;
+    color: #d61b23; text-shadow: 0 3px 0 #2a0405, 0 0 28px rgba(214,27,35,0.35); letter-spacing: 1px; }
+  h1 small { display: block; font-family: Inter, sans-serif; font-size: clamp(16px, 2.2vw, 20px); color: var(--bone); letter-spacing: 6px;
+    font-weight: 600; text-transform: uppercase; text-shadow: none; margin-top: 10px; opacity: .85; }
+  .lede { color: var(--dim); font-size: 18px; max-width: 620px; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+  .btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 22px; border-radius: 12px; font-weight: 700; font-size: 16px;
+    border: 1px solid var(--line); color: var(--text); background: rgba(255,255,255,0.04); transition: transform .15s, background .15s, box-shadow .15s; cursor: pointer; }
+  .btn:hover { text-decoration: none; transform: translateY(-2px); background: rgba(255,255,255,0.08); }
+  .btn.primary { background: linear-gradient(180deg, #d0222b, #8f0a10); border-color: #e0262f; color: #fff;
+    box-shadow: 0 10px 30px rgba(179,18,26,0.35), inset 0 1px 0 rgba(255,255,255,0.25); }
+  .btn.primary:hover { box-shadow: 0 14px 40px rgba(224,38,47,0.5), inset 0 1px 0 rgba(255,255,255,0.25); }
+  .btn svg { width: 18px; height: 18px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 18px; color: var(--dim); font-size: 14px; }
+  .meta b { color: var(--text); font-weight: 600; }
+  .hero-art { display: grid; place-items: center; }
+  .card-shot { width: 100%; max-width: 360px; border-radius: 18px; padding: 22px; background: linear-gradient(180deg, #1c1110, #120b0a);
+    border: 1px solid rgba(224,38,47,0.25); box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.6); position: relative; }
+  .card-shot .eye { margin: 6px auto 18px; }
+  .timer { font-family: "JetBrains Mono", monospace; font-weight: 600; font-size: 40px; text-align: right; color: #fff; }
+  .split { display: flex; justify-content: space-between; font-size: 14px; padding: 6px 0; border-bottom: 1px solid var(--line); color: var(--dim); }
+  .split .g { color: var(--ok); } .split .r { color: #ff6a6a; } .split .gold { color: #f3c04a; }
+  .nail { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: #4a3f39; box-shadow: inset 0 0 0 1px #000, 1px 1px 0 rgba(255,255,255,0.15); }
+
+  /* ---------- sections */
+  section { padding: 64px 0; }
+  h2 { font-size: clamp(26px, 3.4vw, 36px); margin: 0 0 8px; letter-spacing: -.3px; }
+  h2 .accent { color: var(--blood2); }
+  .sub { color: var(--dim); margin: 0 0 30px; max-width: 700px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  .feat { position: relative; padding: 22px; border-radius: var(--radius); background: linear-gradient(180deg, var(--panel2), var(--panel));
+    border: 1px solid var(--line); transition: border-color .2s, transform .2s; }
+  .feat:hover { border-color: rgba(224,38,47,0.4); transform: translateY(-3px); }
+  .feat .ic { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; font-size: 20px;
+    background: rgba(179,18,26,0.15); border: 1px solid rgba(224,38,47,0.3); margin-bottom: 14px; }
+  .feat h3 { margin: 0 0 6px; font-size: 18px; }
+  .feat p { margin: 0; color: var(--dim); font-size: 15px; }
+
+  /* ---------- install steps */
+  .steps { counter-reset: step; display: grid; gap: 14px; }
+  .step { display: grid; grid-template-columns: 56px 1fr; gap: 16px; padding: 22px; border-radius: var(--radius);
+    background: linear-gradient(180deg, var(--panel2), var(--panel)); border: 1px solid var(--line); }
+  .step::before { counter-increment: step; content: counter(step); width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+    font-weight: 800; font-size: 20px; color: #fff; background: linear-gradient(180deg, #d0222b, #7d0a0f); box-shadow: 0 6px 18px rgba(179,18,26,0.35); }
+  .step h3 { margin: 6px 0 6px; font-size: 18px; }
+  .step p { margin: 0 0 8px; color: var(--dim); }
+  .step ul { margin: 6px 0 0; padding-left: 20px; color: var(--dim); }
+  .step li { margin: 4px 0; }
+  .callout { margin-top: 12px; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(243,192,74,0.3); background: rgba(243,192,74,0.07); color: #f1d9a0; font-size: 15px; }
+  .callout.red { border-color: rgba(224,38,47,0.35); background: rgba(179,18,26,0.09); color: #ffc9c9; }
+  .file { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+    background: rgba(0,0,0,0.35); border: 1px dashed rgba(255,255,255,0.14); }
+  .file code { background: none; padding: 0; }
+  .copy { margin-left: auto; font: 600 13px Inter, sans-serif; color: var(--text); background: rgba(255,255,255,0.07); border: 1px solid var(--line);
+    padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+  .copy:hover { background: rgba(255,255,255,0.12); }
+  .tree { margin-top: 10px; padding: 14px 16px; border-radius: 10px; background: rgba(0,0,0,0.35); border: 1px solid var(--line);
+    font-family: "JetBrains Mono", monospace; font-size: 13.5px; line-height: 1.7; color: var(--dim); white-space: pre; overflow-x: auto; }
+  .tree b { color: var(--bone); font-weight: 600; } .tree i { color: var(--ember); font-style: normal; }
+
+  /* ---------- keys + faq */
+  .keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+  .key { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); color: var(--dim); font-size: 15px; }
+  kbd { min-width: 38px; text-align: center; padding: 4px 8px; border-radius: 7px; background: linear-gradient(180deg, #2b1d1b, #1a1110);
+    border: 1px solid #3a2724; border-bottom-width: 3px; color: var(--bone); font: 600 13px "JetBrains Mono", monospace; }
+  details { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 0 18px; margin-bottom: 10px; }
+  summary { cursor: pointer; padding: 16px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; color: var(--blood2); font-size: 22px; transition: transform .2s; }
+  details[open] summary::after { transform: rotate(45deg); }
+  details p, details ul { color: var(--dim); margin: 0 0 16px; }
+
+  /* ---------- download band + footer */
+  .band { margin: 20px 0 0; padding: 40px; border-radius: 20px; text-align: center;
+    background: radial-gradient(600px 220px at 50% 0%, rgba(224,38,47,0.22), transparent), linear-gradient(180deg, #1d1110, #120a09);
+    border: 1px solid rgba(224,38,47,0.3); }
+  .band h2 { margin-bottom: 6px; }
+  .band .cta { justify-content: center; }
+  footer { padding: 40px 0 60px; color: #7d6d64; font-size: 14px; border-top: 1px solid var(--line); margin-top: 40px; }
+  footer .wrap { display: grid; gap: 10px; }
+
+  /* drip under the nav */
+  .drips { position: absolute; left: 0; right: 0; top: 61px; height: 0; pointer-events: none; }
+  .drip { position: absolute; top: 0; width: 4px; border-radius: 0 0 4px 4px; background: linear-gradient(#8f0a10, #b3121a);
+    animation: drip 6s ease-in infinite; }
+  .drip::after { content: ""; position: absolute; left: -2px; bottom: -4px; width: 8px; height: 8px; border-radius: 50%; background: #b3121a; }
+  @keyframes drip { 0% { height: 2px } 70% { height: var(--h) } 100% { height: var(--h); opacity: 0 } }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } #embers { display: none; } }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="candle"></div>
+<canvas id="embers"></canvas>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#"><span class="eye" aria-hidden="true"><span class="iris"></span></span> GrannyTools</a>
+    <div class="navlinks">
+      <a href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a href="#keys">Keys</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <a class="btn primary" style="padding:9px 16px;font-size:14px" href="https://github.com/lagonman9-crypto/GrannyTools/releases/latest/download/GrannyTools.dll">Download</a>
+  </div>
+  <div class="drips" aria-hidden="true"></div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <span class="kicker"><span class="dot"></span> v3.0.0 · free · PC (Steam)</span>
+      <h1>GrannyTools<small>Speedrun &amp; mod menu</small></h1>
+      <p class="lede">A full speedrun, practice and fun menu for the PC version of Granny: a live timer with splits and personal bests,
+        skips for slow scenes, a route guide, new difficulties, an FPS boost and a lot more — all in one in-game menu (press <kbd>F1</kbd>).</p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/lagonman9-crypto/GrannyTools/releases/latest/download/GrannyTools.dll">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m6 11 6 6 6-6"/><path d="M4 21h16"/></svg>
+          Download GrannyTools.dll</a>
+        <a class="btn" href="#install">How to install</a>
+      </div>
+      <div class="meta">
+        <span>Needs <b>BepInEx 6.0.0 (build 793), IL2CPP x64</b></span>
+        <span>Windows · Steam version of Granny</span>
+      </div>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <div class="card-shot">
+        <span class="nail" style="left:10px;top:10px"></span><span class="nail" style="right:10px;top:10px"></span>
+        <span class="nail" style="left:10px;bottom:10px"></span><span class="nail" style="right:10px;bottom:10px"></span>
+        <div class="eye big"><span class="iris"></span></div>
+        <div class="split"><span>Padlock Key</span><span class="g">−1.2</span><span>0:09.6</span></div>
+        <div class="split"><span>Hammer</span><span class="gold">best</span><span>0:41.0</span></div>
+        <div class="split"><span>Plank 2</span><span class="r">+0.8</span><span>0:52.3</span></div>
+        <div class="split"><span>Exit Key</span><span class="g">−3.4</span><span>1:38.7</span></div>
+        <div class="timer" id="fakeTimer">1:52.04</div>
+        <div class="split" style="border:0"><span>PB 2:01.58</span><span>Easy #121</span></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <h2>Everything for <span class="accent">faster runs</span></h2>
+    <p class="sub">Every feature can be switched on or off in the menu. Cheats and practice tools are clearly separated from the timer, so you can keep legit runs legit.</p>
+    <div class="grid">
+      <div class="feat"><div class="ic">⏱</div><h3>Timer &amp; splits</h3><p>Auto-splits on items and locks, live pace, best possible time, golds, sum of best, run history and a PB ghost — separate records for every difficulty.</p></div>
+      <div class="feat"><div class="ic">⏩</div><h3>Skips</h3><p>Fast wake-up, fast doors and drawers, instant crawling-mom key, skip the get-up after a fall, instant gas can and bear traps, logo skip.</p></div>
+      <div class="feat"><div class="ic">🧭</div><h3>Route guide</h3><p>Highlights only the next thing you need (including keys for locked boxes), draws the walking path to it, and shows spawn presets.</p></div>
+      <div class="feat"><div class="ic">💀</div><h3>New difficulties</h3><p>Easy + Extreme Granny, Easy ++ (a much faster Granny), Mirror (the whole house flipped) and Terror — dark, VHS-filtered and a lot scarier.</p></div>
+      <div class="feat"><div class="ic">🎯</div><h3>Practice tools</h3><p>Save and load positions (with Granny), go to the next target, auto-restart when caught or behind PB, pickup aim assist and auto-grab.</p></div>
+      <div class="feat"><div class="ic">⚡</div><h3>FPS boost</h3><p>Uncapped frame rate, lower render scale and textures, view distance, hidden far clutter — or one click on the Max FPS preset.</p></div>
+      <div class="feat"><div class="ic">👁</div><h3>Visuals &amp; ESP</h3><p>Granny and item outlines, fullbright, FOV changer, freecam, zoom, radar, Granny warning and RGB effects for fun.</p></div>
+      <div class="feat"><div class="ic">📺</div><h3>Stream-safe mode</h3><p>Hides ESP and practice overlays from OBS while your timer and key display stay visible on stream.</p></div>
+      <div class="feat"><div class="ic">🔎</div><h3>Polished menu</h3><p>A haunted-house menu with search (<kbd>/</kbd>), keybinds, themes and custom menu, ambience and chase music.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <h2>Install in <span class="accent">5 steps</span></h2>
+    <p class="sub">GrannyTools is a BepInEx plugin. You install BepInEx into the game folder once, then drop the mod in.</p>
+    <div class="steps">
+
+      <div class="step"><div>
+        <h3>Get the right BepInEx</h3>
+        <p>Granny runs on Unity 6 with IL2CPP, so it needs the <b>bleeding-edge BepInEx 6</b>, the <b>Unity IL2CPP</b> build for <b>Windows x64</b> — exactly build <b>793</b>:</p>
+        <div class="file"><code id="bepFile">BepInEx-Unity.IL2CPP-win-x64-6.0.0-be.793+dbc82f0.zip</code>
+          <button class="copy" data-copy="bepFile">Copy name</button></div>
+        <div class="cta" style="margin-top:14px">
+          <a class="btn primary" href="https://builds.bepinex.dev/projects/bepinex_be/793/BepInEx-Unity.IL2CPP-win-x64-6.0.0-be.793%2Bdbc82f0.zip">Download BepInEx (build 793)</a>
+          <a class="btn" href="https://builds.bepinex.dev/projects/bepinex_be">All BepInEx bleeding-edge builds</a>
+        </div>
+        <div class="callout red"><b>Don't use</b> BepInEx 5, the “Unity.Mono” build, or the stable 6.0.0-pre releases from GitHub — the mod won't load with them. On the builds page, open build <b>#793</b> and pick <b>BepInEx-Unity.IL2CPP-win-x64</b>.</div>
+      </div></div>
+
+      <div class="step"><div>
+        <h3>Open the Granny folder</h3>
+        <p>In Steam: right-click <b>Granny</b> → <b>Manage</b> → <b>Browse local files</b>. This is the folder with <code>Granny.exe</code> in it (usually <code>C:\Program Files (x86)\Steam\steamapps\common\Granny</code>).</p>
+      </div></div>
+
+      <div class="step"><div>
+        <h3>Extract BepInEx into it</h3>
+        <p>Unzip everything from the BepInEx zip straight into that folder, next to <code>Granny.exe</code> (not into a sub-folder). It should look like this:</p>
+        <div class="tree"><b>Granny/</b>
+├── <i>BepInEx/</i>
+├── <i>dotnet/</i>
+├── <i>doorstop_config.ini</i>
+├── <i>winhttp.dll</i>
+├── Granny.exe
+├── Granny_Data/
+└── …</div>
+      </div></div>
+
+      <div class="step"><div>
+        <h3>Start the game once</h3>
+        <p>Launch Granny from Steam and wait at the logo/menu. The <b>first start takes a minute or two</b> while BepInEx prepares the game — it can look frozen, that's normal. When the main menu shows up, close the game.</p>
+        <p>After this, the folder <code>BepInEx/plugins</code> exists (create it if it doesn't).</p>
+      </div></div>
+
+      <div class="step"><div>
+        <h3>Add GrannyTools and play</h3>
+        <p>Put <code>GrannyTools.dll</code> into <code>Granny/BepInEx/plugins/</code>, start the game and press <kbd>F1</kbd> to open the menu.</p>
+        <div class="cta" style="margin-top:6px">
+          <a class="btn primary" href="https://github.com/lagonman9-crypto/GrannyTools/releases/latest/download/GrannyTools.dll">Download GrannyTools.dll</a>
+          <a class="btn" href="https://github.com/lagonman9-crypto/GrannyTools/releases">All versions</a>
+        </div>
+        <div class="callout">Check it loaded: <code>Granny/BepInEx/LogOutput.log</code> should contain <code>GrannyTools 3.0.0 loaded. Press F1 for the menu.</code></div>
+      </div></div>
+
+    </div>
+  </div>
+</section>
+
+<section id="keys">
+  <div class="wrap">
+    <h2>Default <span class="accent">keys</span></h2>
+    <p class="sub">Every key can be changed on the Keybinds page of the menu.</p>
+    <div class="keys">
+      <div class="key"><kbd>F1</kbd> Open / close the menu</div>
+      <div class="key"><kbd>/</kbd> Search the menu</div>
+      <div class="key"><kbd>F10</kbd> Quick restart</div>
+      <div class="key"><kbd>F11</kbd> Manual split</div>
+      <div class="key"><kbd>F7</kbd> Restart timer</div>
+      <div class="key"><kbd>F5</kbd> Save position</div>
+      <div class="key"><kbd>F6</kbd> Load position</div>
+      <div class="key"><kbd>F8</kbd> Toggle ESP</div>
+      <div class="key"><kbd>F2</kbd> Freeze Granny</div>
+      <div class="key"><kbd>F3</kbd> God mode</div>
+      <div class="key"><kbd>V</kbd> Noclip</div>
+      <div class="key"><kbd>B</kbd> Freecam</div>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <h2>FAQ &amp; <span class="accent">troubleshooting</span></h2>
+    <p class="sub">&nbsp;</p>
+    <details><summary>F1 does nothing / no menu</summary>
+      <ul><li>Make sure BepInEx is the <b>IL2CPP x64 build 793</b> (step 1) and that <code>winhttp.dll</code> sits right next to <code>Granny.exe</code>.</li>
+      <li>Make sure <code>GrannyTools.dll</code> is in <code>BepInEx/plugins</code>.</li>
+      <li>Open <code>BepInEx/LogOutput.log</code> and look for <code>GrannyTools</code> and any red errors.</li></ul></details>
+    <details><summary>The first launch is stuck</summary>
+      <p>The first start with BepInEx builds files for the game and can take a couple of minutes. Wait for it; later starts are fast.</p></details>
+    <details><summary>Can I use it for leaderboard runs?</summary>
+      <p>Check your leaderboard's rules. The timer, splits and skips that don't change gameplay are usually fine for personal practice; ESP, god mode, speed changes and the custom difficulties are for practice and fun, not for submitted runs.</p></details>
+    <details><summary>Custom menu, ambience and chase music</summary>
+      <p>Put WAV files named <code>GrannyTools_menu_music.wav</code>, <code>GrannyTools_ambience.wav</code> and <code>GrannyTools_chase.wav</code> in <code>BepInEx/config</code>, then switch them on in Misc → Menu music.</p></details>
+    <details><summary>How do I uninstall?</summary>
+      <p>Delete <code>BepInEx/plugins/GrannyTools.dll</code>. To remove BepInEx completely, also delete <code>winhttp.dll</code>, <code>doorstop_config.ini</code>, <code>dotnet</code> and the <code>BepInEx</code> folder. You can also use Steam's “Verify integrity of game files”.</p></details>
+
+    <div class="band">
+      <h2>Ready to <span class="accent">run</span>?</h2>
+      <p class="sub" style="margin:0 auto 6px">Free download. Single-player only.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/lagonman9-crypto/GrannyTools/releases/latest/download/GrannyTools.dll">Download GrannyTools.dll</a>
+        <a class="btn" href="https://builds.bepinex.dev/projects/bepinex_be/793/BepInEx-Unity.IL2CPP-win-x64-6.0.0-be.793%2Bdbc82f0.zip">Get BepInEx 793</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div><b style="color:var(--dim)">GrannyTools</b> is an unofficial, fan-made mod. It is not affiliated with, endorsed by or connected to DVloper or the makers of Granny. You need your own copy of the game.</div>
+    <div>BepInEx is made by the BepInEx team and is downloaded from their own site. Use mods at your own risk and keep a backup of your saves.</div>
+  </div>
+</footer>
+
+<script>
+  // copy buttons
+  document.querySelectorAll('.copy').forEach(b => b.addEventListener('click', () => {
+    const t = document.getElementById(b.dataset.copy).textContent;
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(
+      () => { b.textContent = 'Copied!'; setTimeout(() => b.textContent = 'Copy name', 1400); },
+      () => { b.textContent = 'Select & copy'; });
+  }));
+
+  // the eyes follow your cursor
+  const irises = [...document.querySelectorAll('.eye .iris')];
+  addEventListener('mousemove', e => {
+    for (const i of irises) {
+      const r = i.parentElement.getBoundingClientRect();
+      const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+      const d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 260);
+      i.style.transform = `translate(${dx / d * k * r.width * 0.26}px, ${dy / d * k * r.height * 0.22}px)`;
+    }
+  });
+
+  // blood drips under the nav
+  const drips = document.querySelector('.drips');
+  for (let n = 0; n < 14; n++) {
+    const d = document.createElement('span');
+    d.className = 'drip';
+    d.style.left = (4 + Math.random() * 92) + '%';
+    d.style.setProperty('--h', (8 + Math.random() * 26) + 'px');
+    d.style.animationDelay = (Math.random() * 6).toFixed(2) + 's';
+    d.style.animationDuration = (5 + Math.random() * 5).toFixed(2) + 's';
+    drips.appendChild(d);
+  }
+
+  // a running timer on the hero card
+  const ft = document.getElementById('fakeTimer');
+  let t0 = performance.now() - 112040;
+  (function tick() {
+    const s = ((performance.now() - t0) / 1000) % 600;
+    ft.textContent = `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, '0')}`;
+    requestAnimationFrame(tick);
+  })();
+
+  // embers drifting up
+  const cv = document.getElementById('embers'), cx = cv.getContext('2d');
+  let W, H, embers = [];
+  function size() { W = cv.width = innerWidth; H = cv.height = innerHeight; }
+  size(); addEventListener('resize', size);
+  for (let i = 0; i < 46; i++) embers.push({ x: Math.random(), y: Math.random(), s: .6 + Math.random() * 2.2, v: .02 + Math.random() * .05, p: Math.random() * 6.28 });
+  (function draw(t) {
+    cx.clearRect(0, 0, W, H);
+    for (const e of embers) {
+      e.y -= e.v / 60; if (e.y < -0.02) { e.y = 1.02; e.x = Math.random(); }
+      const x = (e.x + Math.sin(t / 1400 + e.p) * 0.01) * W, y = e.y * H;
+      const a = (0.35 + 0.35 * Math.sin(t / 300 + e.p)) * Math.min(1, (1 - e.y) * 4, e.y * 3);
+      const g = cx.createRadialGradient(x, y, 0, x, y, e.s * 5);
+      g.addColorStop(0, `rgba(255,170,90,${a})`); g.addColorStop(1, 'rgba(255,80,30,0)');
+      cx.fillStyle = g; cx.beginPath(); cx.arc(x, y, e.s * 5, 0, 6.283); cx.fill();
+    }
+    requestAnimationFrame(draw);
+  })(0);
+</script>
+</body>
+</html>
